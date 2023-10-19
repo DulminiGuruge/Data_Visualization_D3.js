@@ -6,3 +6,8 @@ dataExtract.ipynb is the python code used to generate the json by processing the
 
 Technologies:
 Python, CSV files, D3.js
+
+Output of the Trade Visualization
+![Alt text](image.png)
+
+![Alt text](image1.png)
