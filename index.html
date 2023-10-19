@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Network Vizualization</title>
+	<meta charset="UTF-8">
+	<script src="https://d3js.org/d3.v7.min.js"></script>
+
+</head>
+
+<body>
+	<svg width="1200" height="600"></svg>
+	<script>
+		var width="1200";
+		var height="600";
+
+		var clickedNodeId = 0;
+		var clickedCount = 0;
+		// Load the node data and link data from a JSON file
+		d3.json("countries.json").then(function (data) {
+			const nodes = data.nodes;
+			const links = data.links;
+			// console.log(links)
+			const distanceScale = d3.scaleLinear()
+			.domain([0, d3.max(links, d => d.value)])
+			.range([30, 400]);
+
+			const linkForce = d3.forceLink(links)
+			.id(d => d.id)
+			.distance(d => distanceScale(d.value));
+
+			const simulation = d3.forceSimulation(nodes)
+			.force("link", linkForce)
+			.force("charge", d3.forceManyBody().strength(-40))
+			.force("center", d3.forceCenter(width / 2, height / 2))
+			//.force("link", d3.forceLink(links).id(d => d.id).distance(d => d.value / 500))
+			.force("collide", d3.forceCollide().strength(1.9))
+			.force("forceX", d3.forceX().strength(.04).x(.9))
+			.force("forceY", d3.forceY().strength(.09).y(.98))
+			.on("tick", ticked);
+
+			
+
+			// Create the links
+			const link = d3.select("svg")
+				.selectAll(".link")
+				.data(links)
+				.enter()
+				.append("line")
+				.attr("class", "link")
+				.attr("stroke", " #1d22b9")
+				.attr("stroke-width", "2px")
+				.attr("stroke-opacity", "0.6");
+
+			// Craete the nodes
+			const node = d3.select("svg")
+				.selectAll(".node")
+				.data(nodes)
+				.enter()
+				.append("circle")
+				.attr("class", "node")
+				.attr("r", 5)
+				.attr("fill", "red")
+				.attr("stroke-width", "2px")
+				.on("click", function (d) { clicked(d3.select(this)) });
+	
+
+
+			function ticked() {
+				link
+				.attr("x1", d => d.source.x)
+				.attr("y1", d => d.source.y)
+				.attr("x2", d => d.target.x)
+				.attr("y2", d => d.target.y);
+
+				node
+				.attr("cx", d => d.x)
+				.attr("cy", d => d.y);
+			}
+
+
+
+			//this function is called when clicked on the svg
+
+			function clicked(node) {
+
+				console.log(node.data()[0].id);
+
+
+				if (clickedNodeId == node.data()[0].id) {
+					//check whether the same id was clicked once
+					if (clickedCount == 1) {
+						clickedCount += 1;
+
+					clickedNodeId = node.data()[0].id;
+					clickedCount +=1;
+
+					const targetData = [];
+					const targetNodes = [];
+					targetNodes.push(clickedNodeId);
+
+					// Find target nodes whose source node is the clicked node
+					links.forEach(link => {
+
+						if (link.target.id === clickedNodeId) {
+							targetData.push(link);
+							targetNodes.push(link.source.id);
+
+						}
+					});
+
+
+					const targetLinks = d3.select("svg")
+						.selectAll(".link")
+						//.attr("stroke",none)
+						.data(targetData, d => d.source.id + "-" + d.target.id); 
+
+					targetLinks
+						.attr("stroke-width", "2px")
+						.attr("stroke", "blue");
+
+
+					// Clear the attributes of links that are not in the targetNodes array
+					d3.select("svg")
+						.selectAll(".link")
+						.filter(d => !targetData.includes(d))
+						//.attr("stroke-width", 1)
+						.attr("stroke", "none");
+
+
+					// Change the fill color of nodes
+					// Clear the attributes of links that are not in the targetNodes array
+					d3.select("svg")
+						.selectAll(".node")
+						.attr("fill", function (d) {
+							if (d.id === clickedNodeId) {
+								return "red";
+							} else if (targetNodes.includes(d.id)) {
+								return "red";
+							} else {
+								return "grey";
+							}
+						})
+						.attr("opacity", function (d) {
+							if (d.id === clickedNodeId) {
+								return "1.0";
+							} else if (targetNodes.includes(d.id)) {
+								return "1.0";
+							} else {
+								return "0.0";
+							}
+						});
+
+
+
+
+
+
+					}
+					//check whetehr the same id was clicked twice-----------------------
+					else {
+
+
+					//console.log("Target nodes:", targetData);
+
+
+					const targetLinks = d3.select("svg")
+						.selectAll(".link")
+						//.attr("stroke",none)
+						.data(links); // Use a key function to ensure consistent matching
+
+					targetLinks
+					    .attr("stroke-width", "2px")
+						.attr("stroke", " #1d22b9")
+						.attr("stroke-opacity", "0.6");
+
+					// Change the fill color of nodes
+					// Clear the attributes of links that are not in the targetNodes array
+					d3.select("svg")
+						.selectAll(".node")
+						.data(nodes)
+						.attr("fill", "red")
+						.attr("stroke-width", "2px")
+						.attr("opacity", "1.0");
+
+
+						//reset all the values after 
+						clickedCount = 0;
+						clickedNodeId = 0;
+					}
+
+
+				} else {
+
+					//If it is the first click on a node update the node data
+					clickedNodeId = node.data()[0].id;
+					clickedCount +=1;
+
+					const targetData = [];
+					const targetNodes = [];
+					targetNodes.push(clickedNodeId);
+
+					// Find target nodes whose source node is the clicked node
+					links.forEach(link => {
+
+						if (link.source.id === clickedNodeId) {
+							targetData.push(link);
+							targetNodes.push(link.target.id);
+
+						}
+					});
+
+					//console.log("Target nodes:", targetData);
+
+
+					const targetLinks = d3.select("svg")
+						.selectAll(".link")
+						//.attr("stroke",none)
+						.data(targetData, d => d.source.id + "-" + d.target.id); // Use a key function to ensure consistent matching
+
+					targetLinks
+					    .attr("stroke-width", "2px")
+						.attr("stroke", "blue");
+
+
+					// Clear the attributes of links that are not in the targetNodes array
+					d3.select("svg")
+						.selectAll(".link")
+						.filter(d => !targetData.includes(d))
+						//.attr("stroke-width", 1)
+						.attr("stroke", "none");
+
+
+					// Change the fill color of nodes
+					
+					d3.select("svg")
+						.selectAll(".node")
+						.attr("fill", function (d) {
+							if (d.id === clickedNodeId) {
+								return "red";
+							} else if (targetNodes.includes(d.id)) {
+								return "red";
+							} else {
+								return "grey";
+							}
+						})// Clear the attributes of links that are not in array
+						.attr("opacity", function (d) {
+							if (d.id === clickedNodeId) {
+								return "1.0";
+							} else if (targetNodes.includes(d.id)) {
+								return "1.0";
+							} else {
+								return "0.0";
+							}
+						});
+
+
+
+
+				}
+
+
+
+			}
+
+
+
+		});
+
+
+
+	</script>
+</body>
+
+</html>
